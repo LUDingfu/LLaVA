@@ -33,3 +33,7 @@ ckpts*
 
 # Demo
 serve_images/
+# Ignore playground training data and scripts
+playground/data/llava_pretrain/
+playground/data/llava_pretrain_2/
+llava/train/playground/
