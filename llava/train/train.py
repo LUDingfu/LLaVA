@@ -831,6 +831,10 @@ def train(attn_implementation=None):
                 torch_dtype=(torch.bfloat16 if training_args.bf16 else None),
                 **bnb_model_from_pretrained_args
             )
+            model.generation_config.do_sample = False
+            model.generation_config.temperature = None
+            model.generation_config.top_p = None
+            model.generation_config.top_k=None
     else:
         model = transformers.LlamaForCausalLM.from_pretrained(
             model_args.model_name_or_path,

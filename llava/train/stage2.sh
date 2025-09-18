@@ -4,10 +4,10 @@ deepspeed llava/train/train_mem.py \
     --deepspeed ./scripts/zero3.json \
     --model_name_or_path lmsys/vicuna-7b-v1.5 \
     --version v1 \
-    --data_path /nfs/AI/VideoEnhancement/dingfu/vg/LLaVA/playground/data/llava_pretrain/blip_laion_cc_sbu_558k.json \
-    --image_folder /nfs/AI/VideoEnhancement/dingfu/vg/LLaVA/playground/data/llava_pretrain/images \
+    --data_path /nfs/AI/VideoEnhancement/dingfu/vg/LLaVA/playground/llava_v1_5_mix665k.json \
+    --image_folder /nfs/AI/VideoEnhancement/dingfu/vg/LLaVA/playground/data/ \
     --vision_tower facebook/dinov2-base \
-    --pretrain_mm_mlp_adapter ./checkpoints/llava-v1.5-13b-dinov2-pretrain/mm_projector.bin \
+    --pretrain_mm_mlp_adapter /nfs/AI/VideoEnhancement/dingfu/vg/LLaVA/checkpoints/llava-v1.5-7b-dinov2-pretrain/mm_projector.bin \
     --mm_projector_type mlp2x_gelu \
     --mm_vision_select_layer -2 \
     --mm_use_im_start_end False \
