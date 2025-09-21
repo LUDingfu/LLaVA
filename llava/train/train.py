@@ -110,7 +110,7 @@ class TrainingArguments(transformers.TrainingArguments):
     lora_bias: str = "none"
     mm_projector_lr: Optional[float] = None
     group_by_modality_length: bool = field(default=False)
-
+    # save_steps: int = 1
 
 def maybe_zero_3(param, ignore_status=False, name=None):
     from deepspeed import zero
@@ -831,10 +831,10 @@ def train(attn_implementation=None):
                 torch_dtype=(torch.bfloat16 if training_args.bf16 else None),
                 **bnb_model_from_pretrained_args
             )
-            model.generation_config.do_sample = False
-            model.generation_config.temperature = None
-            model.generation_config.top_p = None
-            model.generation_config.top_k=None
+            # model.generation_config.do_sample = False
+            # model.generation_config.temperature = None
+            # model.generation_config.top_p = None
+            # model.generation_config.top_k=None
     else:
         model = transformers.LlamaForCausalLM.from_pretrained(
             model_args.model_name_or_path,
@@ -962,11 +962,13 @@ def train(attn_implementation=None):
 
     data_module = make_supervised_data_module(tokenizer=tokenizer,
                                               data_args=data_args)
+    # training_args.set_save(strategy="steps", steps=1)
+    # print(model.config)
     trainer = LLaVATrainer(model=model,
                     tokenizer=tokenizer,
                     args=training_args,
                     **data_module)
-
+    # trainer.save_model()
     if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):
         trainer.train(resume_from_checkpoint=True)
     else:

@@ -2,7 +2,7 @@
 
 deepspeed llava/train/train_mem.py \
     --deepspeed ./scripts/zero3.json \
-    --model_name_or_path lmsys/vicuna-7b-v1.5 \
+    --model_name_or_path /nfs/AI/VideoEnhancement/dingfu/vg/LLaVA/vicuna_ckpt \
     --version v1 \
     --data_path /nfs/AI/VideoEnhancement/dingfu/vg/LLaVA/playground/llava_v1_5_mix665k.json \
     --image_folder /nfs/AI/VideoEnhancement/dingfu/vg/LLaVA/playground/data/ \

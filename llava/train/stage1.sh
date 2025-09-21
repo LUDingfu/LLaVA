@@ -4,8 +4,8 @@ deepspeed llava/train/train_mem.py \
     --deepspeed ./scripts/zero3.json \
     --model_name_or_path lmsys/vicuna-7b-v1.5 \
     --version v1 \
-    --data_path ./playground/data/llava_pretrain/blip_laion_cc_sbu_558k.json \
-    --image_folder /home/s9059060/llava_pretrain \
+    --data_path ./playground/data/stage2/llava_v1_5_mix665k.json \
+    --image_folder /home/s9059060/stage2/data \
     --vision_tower facebook/dinov2-base \
     --mm_projector_type mlp2x_gelu \
     --tune_mm_mlp_adapter True \
