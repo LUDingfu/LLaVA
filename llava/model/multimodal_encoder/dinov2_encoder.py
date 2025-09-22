@@ -14,7 +14,7 @@ class Dinov2VisionTower(nn.Module):
         # For Dinov2, we set select_layer to -2
         self.select_layer = getattr(args, 'mm_vision_select_layer', -2)
         self.select_feature = getattr(args, 'mm_vision_select_feature', 'patch')
-
+        
         if not delay_load:
             self.load_model()
         elif getattr(args, 'unfreeze_mm_vision_tower', False):
@@ -28,7 +28,10 @@ class Dinov2VisionTower(nn.Module):
             return
 
         # Use AutoImageProcessor for Dinov2
-        self.image_processor = AutoImageProcessor.from_pretrained(self.vision_tower_name)
+        self.image_processor = AutoImageProcessor.from_pretrained(self.vision_tower_name,
+                                                              size={"height": 768, "width": 768}, crop_size={"height": 768, "width": 768})
+        # self.image_processor.crop_size['height'] = self.image_processor.crop_size['width'] = 768
+
         self.vision_tower = Dinov2Model.from_pretrained(self.vision_tower_name,device_map=device_map)
         self.vision_tower.requires_grad_(False)
         
@@ -48,6 +51,8 @@ class Dinov2VisionTower(nn.Module):
 
     @torch.no_grad()
     def forward(self, images): # Forward pass to extract features. Handles both single tensor and list of tensors.
+        raise RuntimeError(f"PPPPPPPPPPPPPPPPPTTTTTTT, shape={str(images.shape)}")
+
         if type(images) is list:
             image_features = []
             for image in images:
