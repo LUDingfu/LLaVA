@@ -4,8 +4,8 @@ deepspeed llava/train/train_mem.py \
     --deepspeed ./scripts/zero3.json \
     --model_name_or_path lmsys/vicuna-7b-v1.5 \
     --version v1 \
-    --data_path ./playground/data/stage2/llava_v1_5_mix665k.json \
-    --image_folder /home/s9059060/stage2/data \
+    --data_path /nfs/AI/VideoEnhancement/dingfu/vg/LLaVA/playground/blip_laion_cc_sbu_558k.json \
+    --image_folder /nfs/AI/VideoEnhancement/dingfu/vg/LLaVA/playground/data_zips/llava_pretrain/images \
     --vision_tower facebook/dinov2-base \
     --mm_projector_type mlp2x_gelu \
     --tune_mm_mlp_adapter True \
@@ -13,7 +13,7 @@ deepspeed llava/train/train_mem.py \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
     --bf16 True \
-    --output_dir ./checkpoints/llava-v1.5-13b-dinov2-pretrain \
+    --output_dir ./checkpoints/llava-v1.5-7b-dinov2-pretrain_real_518 \
     --num_train_epochs 1 \
     --per_device_train_batch_size 32 \
     --gradient_accumulation_steps 1 \

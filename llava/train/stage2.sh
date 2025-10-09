@@ -1,13 +1,14 @@
 #!/bin/bash
 
 deepspeed llava/train/train_mem.py \
+    --resume_from_checkpoint /dev/shm/llava-v1.5-7b-dinov2_stage2_518/checkpoint-1000 \
     --deepspeed ./scripts/zero3.json \
     --model_name_or_path /nfs/AI/VideoEnhancement/dingfu/vg/LLaVA/vicuna_ckpt \
     --version v1 \
     --data_path /nfs/AI/VideoEnhancement/dingfu/vg/LLaVA/playground/llava_v1_5_mix665k.json \
     --image_folder /nfs/AI/VideoEnhancement/dingfu/vg/LLaVA/playground/data/ \
     --vision_tower facebook/dinov2-base \
-    --pretrain_mm_mlp_adapter /nfs/AI/VideoEnhancement/dingfu/vg/LLaVA/checkpoints/llava-v1.5-7b-dinov2-pretrain/mm_projector.bin \
+    --pretrain_mm_mlp_adapter /nfs.auto/AI/VideoEnhancement/dingfu/vg/LLaVA/checkpoints/llava-v1.5-7b-dinov2-pretrain_real_518/mm_projector.bin \
     --mm_projector_type mlp2x_gelu \
     --mm_vision_select_layer -2 \
     --mm_use_im_start_end False \
@@ -15,7 +16,7 @@ deepspeed llava/train/train_mem.py \
     --image_aspect_ratio pad \
     --group_by_modality_length True \
     --bf16 True \
-    --output_dir ./checkpoints/llava-v1.5-7b-dinov2 \
+    --output_dir /dev/shm/llava-v1.5-7b-dinov2_stage2_518/ \
     --num_train_epochs 1 \
     --per_device_train_batch_size 32 \
     --learning_rate 2e-5 \

@@ -728,6 +728,7 @@ class LazySupervisedDataset(Dataset):
         if isinstance(i, int):
             data_dict = dict(input_ids=data_dict["input_ids"][0],
                              labels=data_dict["labels"][0])
+        # raise RuntimeError(f"PPPPPPPPPPPPPPPPPTTTTTTT, shape={image.shape}")
 
         # image exist in the data
         if 'image' in self.list_data_dict[i]:
