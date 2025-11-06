@@ -60,9 +60,9 @@ def main(args):
     # Similar operation in model_worker.py
     image_tensor = process_images([image], image_processor, model.config)
     if type(image_tensor) is list:
-        image_tensor = [image.to(model.device, dtype=torch.float16) for image in image_tensor]
+        image_tensor = [image.to(model.device, dtype=torch.bfloat16) for image in image_tensor]
     else:
-        image_tensor = image_tensor.to(model.device, dtype=torch.float16)
+        image_tensor = image_tensor.to(model.device, dtype=torch.bfloat16)
 
     while True:
         try:

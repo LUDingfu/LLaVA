@@ -11,7 +11,7 @@ class Dinov2VisionTower(nn.Module):
         self.select_layer = getattr(args, 'mm_vision_select_layer', -2)
         self.select_feature = getattr(args, 'mm_vision_select_feature', 'patch')
         self.patch_size = 14  # Dinov2-B/14
-        self.target_sizes = [224, 518, 784]  # 多尺度
+        self.target_sizes = [224, 378, 518]  # 多尺度
         if not delay_load or getattr(args, 'unfreeze_mm_vision_tower', False):
             self.load_model()
         else:
@@ -22,7 +22,8 @@ class Dinov2VisionTower(nn.Module):
             print(f'{self.vision_tower_name} is already loaded, skipping.')
             return
         # 这里的 processor 只用于归一化（不让它自动 resize/crop）
-        self.image_processor = AutoImageProcessor.from_pretrained(self.vision_tower_name)
+        img_size = max(self.target_sizes)
+        self.image_processor = AutoImageProcessor.from_pretrained(self.vision_tower_name, size={"height": img_size, "width": img_size}, crop_size={"height": img_size, "width": img_size})
         self.vision_tower = Dinov2Model.from_pretrained(self.vision_tower_name, device_map=device_map)
         self.vision_tower.requires_grad_(False)
         self.is_loaded = True
@@ -44,19 +45,12 @@ class Dinov2VisionTower(nn.Module):
         returns: (B, N=grid^2, C) patch tokens at this scale (未插值到最大网格)
         """
         # 1) 先把输入 resize 到 side×side（不改变通道/类型/设备）
-        imgs_resized = F.interpolate(images_chw, size=(side, side), mode='bicubic', align_corners=False)
 
-        # 2) 经由 processor 做标准化，但禁止二次 resize / center_crop
-        processed = self.image_processor(
-            images=imgs_resized,
-            do_resize=False, do_center_crop=False,
-            return_tensors='pt'
-        )
-        pixel_values = processed['pixel_values'].to(device=self.device, dtype=self.dtype)  # (B,3,side,side)
+        pixel_values = F.interpolate(images_chw, size=(side, side), mode='bilinear', align_corners=False)
 
         # 3) 过 Dinov2，取指定层的 patch token
         out = self.vision_tower(pixel_values, output_hidden_states=True)
-        feats = self.feature_select(out)  # (B, N, C)
+        feats = self.feature_select(out).to(images_chw.dtype)  # (B, N, C)
 
         return feats  # (B, (side/14)^2, C)
 
