@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 from open_clip import create_model_from_pretrained 
 
-from .clip_encoder import ClipVisionTower
+from .clip_encoder import CLIPVisionTower
 
 class ProcessorWrapper:
     def __init__(self, transform, height=378, width=378, image_mean = [0.48145466, 0.4578275, 0.40821073]):
@@ -53,9 +53,9 @@ def extract_res_interp(model_name):
     return base_model_name, res, interp
 
 
-class SiglipVisionTower(ClipVisionTower):
+class SiglipVisionTower(CLIPVisionTower):
     def __init__(self, vision_tower_name, args, delay_load=False):
-        super(ClipVisionTower, self).__init__(vision_tower_name, args, delay_load)
+        super(CLIPVisionTower, self).__init__(vision_tower_name, args, delay_load)
         base_model_name, res, interp = extract_res_interp(vision_tower_name)
         self.vision_tower_name = base_model_name
         self._image_size = res if res is not None else 512
