@@ -4,6 +4,7 @@ from .clip_encoder import CLIPVisionTower, CLIPVisionTowerS2
 from .dinov2_encoder_mrf import Dinov2VisionTower
 from .siglip_encoder import SiglipVisionTower
 from .hybrid_encoder import HybridVisionTower
+from .mrf_encoder import MRFVisionTower
 
 def build_vision_tower(vision_tower_cfg, **kwargs):
     vision_tower = getattr(vision_tower_cfg, 'mm_vision_tower', getattr(vision_tower_cfg, 'vision_tower', None))
@@ -15,6 +16,10 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
         # raise ValueError(f'Unknown vision tower: {vision_tower}')
 
         return HybridVisionTower(vision_tower, args=vision_tower_cfg, **kwargs)
+    
+    # 支持MRF模型: mrf-facebook/dinov2-base-&&&-siglip/CLIP-ViT-SO400M-14-384
+    if vision_tower.startswith("mrf-"):
+        return MRFVisionTower(vision_tower, args=vision_tower_cfg, **kwargs)
 
     if vision_tower.startswith("facebook/dinov2"):
         # if use_s2:
@@ -23,7 +28,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
         #     return Dinov2VisionTower(vision_tower, args=vision_tower_cfg, **kwargs)
         return Dinov2VisionTower(vision_tower, args=vision_tower_cfg, **kwargs)
 
-    if vision_tower=="ViT-SO400M-14-SigLIP":
+    if vision_tower.startswith("siglip"):
         return SiglipVisionTower(vision_tower, args=vision_tower_cfg, **kwargs)
 
     # 支持siglip和CLIP模型

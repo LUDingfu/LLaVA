@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Hybrid Vision Tower训练脚本
-# 融合DINOv2和SigLIP编码器
-# vision_tower格式: hybridmodel-facebook/dinov2-base-&&&-siglip/CLIP-ViT-SO400M-14-384
+# MRF Vision Tower Stage1 预训练脚本
+# 融合三个DINOv2尺度(112,224,518)和一个SigLIP尺度(224)
+# vision_tower格式: mrf-facebook/dinov2-base-&&&-siglip/CLIP-ViT-SO400M-14-384
 
 deepspeed llava/train/train_mem.py \
     --deepspeed ./scripts/zero3.json \
@@ -10,14 +10,14 @@ deepspeed llava/train/train_mem.py \
     --version v1 \
     --data_path /nfs/AI/VideoEnhancement/dingfu/vg/LLaVA/playground/blip_laion_cc_sbu_558k.json \
     --image_folder /nfs/AI/VideoEnhancement/dingfu/vg/LLaVA/playground/data_zips/llava_pretrain/images \
-    --vision_tower "hybridmodel-facebook/dinov2-base-&&&-siglip/CLIP-ViT-B-16" \
+    --vision_tower "mrf-facebook/dinov2-base-&&&-siglip/CLIP-ViT-SO400M-14-384" \
     --mm_projector_type mlp2x_gelu \
     --tune_mm_mlp_adapter True \
     --mm_vision_select_layer -2 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
     --bf16 True \
-    --output_dir ./checkpoints/llava-v1.5-7b-hybrid-dinov2-siglip-pretrain \
+    --output_dir ./checkpoints/llava-v1.5-7b-mrf-pretrain \
     --num_train_epochs 1 \
     --per_device_train_batch_size 32 \
     --gradient_accumulation_steps 1 \

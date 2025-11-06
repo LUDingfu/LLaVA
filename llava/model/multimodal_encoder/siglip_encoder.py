@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from open_clip import create_model_from_pretrained 
 
@@ -28,6 +29,7 @@ class ProcessorWrapper:
 def extract_res_interp(model_name):
     valid_model_prefixes = {
         "siglip/CLIP-ViT-SO400M-14-384":"hf-hub:timm/ViT-SO400M-14-SigLIP-384",
+        "siglip/CLIP-ViT-B-16":"hf-hub:timm/ViT-B-16-SigLIP",
         "timm/ViT-SO400M-14-SigLIP-384":"hf-hub:timm/ViT-SO400M-14-SigLIP-384",
         "siglip/CLIP-ViT-SO400M-14":"hf-hub:timm/ViT-SO400M-14-SigLIP",
         "timm/ViT-SO400M-14-SigLIP":"hf-hub:timm/ViT-SO400M-14-SigLIP"
@@ -53,16 +55,15 @@ def extract_res_interp(model_name):
     return base_model_name, res, interp
 
 
-class SiglipVisionTower(CLIPVisionTower):
+class SiglipVisionTower(nn.Module):
     def __init__(self, vision_tower_name, args, delay_load=False):
-        super().__init__(vision_tower_name, args, delay_load)
+        super().__init__()
+        #super().__init__(vision_tower_name, args, delay_load=True)
         base_model_name, res, interp = extract_res_interp(vision_tower_name)
         self.vision_tower_name = base_model_name
         self._image_size = res if res is not None else 512
         self._interp_size = interp
-        if not self.delay_load:
-            self.load_model()
-        elif self.unfreeze_mm_vision_tower:
+        if not delay_load:
             self.load_model()
         else:
             self._hidden_size = 1152
@@ -75,11 +76,12 @@ class SiglipVisionTower(CLIPVisionTower):
         self.vision_tower.output_tokens = True
 
         self._hidden_size = self.vision_tower.embed_dim
+        self.hidden_size = self._hidden_size
         self._image_size = self.vision_tower.patch_embed.img_size[0]
         self._patch_size = self.vision_tower.patch_embed.patch_size[0]
         self.image_processor = ProcessorWrapper(processor, height=self._image_size, width=self._image_size)
 
-        self.vision_tower.requires_grad_(self.unfreeze_mm_vision_tower)
+        self.vision_tower.requires_grad_(False)
         self.is_loaded = True
 
 
@@ -112,7 +114,7 @@ class SiglipVisionTower(CLIPVisionTower):
         return image_features
 
     def _forward(self, images, interpolate_token = 576):
-        with torch.set_grad_enabled(self.unfreeze_mm_vision_tower):
+        with torch.set_grad_enabled(False):
             image_features = self.vision_tower.forward_features(images.to(device=self.device, dtype=self.dtype))
             interp_features = self.interpolate(image_features)
             return interp_features
