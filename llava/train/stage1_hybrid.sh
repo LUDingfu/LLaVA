@@ -10,7 +10,7 @@ deepspeed llava/train/train_mem.py \
     --version v1 \
     --data_path /nfs/AI/VideoEnhancement/dingfu/vg/LLaVA/playground/blip_laion_cc_sbu_558k.json \
     --image_folder /nfs/AI/VideoEnhancement/dingfu/vg/LLaVA/playground/data_zips/llava_pretrain/images \
-    --vision_tower "hybridmodel-facebook/dinov2-base-&&&-siglip/CLIP-ViT-SO400M-14-384" \
+    --vision_tower "hybridmodel-facebook/dinov2-base-&&&-ViT-SO400M-14-SigLIP" \
     --mm_projector_type mlp2x_gelu \
     --tune_mm_mlp_adapter True \
     --mm_vision_select_layer -2 \

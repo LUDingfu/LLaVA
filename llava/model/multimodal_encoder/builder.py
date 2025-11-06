@@ -23,7 +23,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
         #     return Dinov2VisionTower(vision_tower, args=vision_tower_cfg, **kwargs)
         return Dinov2VisionTower(vision_tower, args=vision_tower_cfg, **kwargs)
 
-    if vision_tower.startswith("siglip"):
+    if vision_tower=="ViT-SO400M-14-SigLIP":
         return SiglipVisionTower(vision_tower, args=vision_tower_cfg, **kwargs)
 
     # 支持siglip和CLIP模型

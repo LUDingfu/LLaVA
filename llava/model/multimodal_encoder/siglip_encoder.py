@@ -55,7 +55,7 @@ def extract_res_interp(model_name):
 
 class SiglipVisionTower(CLIPVisionTower):
     def __init__(self, vision_tower_name, args, delay_load=False):
-        super(CLIPVisionTower, self).__init__(vision_tower_name, args, delay_load)
+        super().__init__(vision_tower_name, args, delay_load)
         base_model_name, res, interp = extract_res_interp(vision_tower_name)
         self.vision_tower_name = base_model_name
         self._image_size = res if res is not None else 512
