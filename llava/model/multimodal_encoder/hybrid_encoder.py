@@ -3,8 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ezcolorlog import root_logger as logger
-
+from .dinov2_encoder import Dinov2VisionTower
+from .siglip_encoder import SiglipVisionTower
 
 class HybridVisionTower(nn.Module):
     """
@@ -25,7 +25,10 @@ class HybridVisionTower(nn.Module):
         # 解析模型名称: hybridmodel-facebook/dinov2-base-&&&-siglip/CLIP-ViT-SO400M-14-384
         model_names = self.vision_tower_name.replace("hybridmodel-", "")
         self.model_names = model_names.split("-&&&-")
-        logger.warning(f"Creating a Hybrid Vision Tower with models: {self.model_names}")
+        print(f"Creating a Hybrid Vision Tower with models: {self.model_names}")
+        
+        self.dinov2 = Dinov2VisionTower("facebook/dinov2-base", args=args, delay_load=delay_load)
+        self.siglip = SiglipVisionTower("siglip/CLIP-ViT-SO400M-14-384", args=args, delay_load=delay_load)
 
         if not delay_load:
             self.load_model()
@@ -35,49 +38,32 @@ class HybridVisionTower(nn.Module):
     def load_model(self):
         """加载两个编码器模型"""
         if self.is_loaded:
-            logger.warning(f'{self.vision_tower_name} is already loaded, skipping.')
+            print(f'{self.vision_tower_name} is already loaded, skipping.')
             return
 
-        # 延迟导入避免循环导入
-        from .builder import build_vision_tower
-
         self.vision_model = "hybrid"
-        
-        # 使用builder加载每个vision tower
-        for i, model_name in enumerate(self.model_names, start=1):
-            # 创建临时args对象用于build_vision_tower
-            class TempArgs:
-                def __init__(self, args, vision_tower_name):
-                    self.mm_vision_tower = vision_tower_name
-                    self.vision_tower = vision_tower_name
-                    self.mm_vision_select_layer = getattr(args, 'mm_vision_select_layer', -2)
-                    self.mm_vision_select_feature = getattr(args, 'mm_vision_select_feature', 'patch')
-                    self.unfreeze_mm_vision_tower = getattr(args, 'unfreeze_mm_vision_tower', False)
-                    self.s2 = False
-            
-            temp_args = TempArgs(self.args, model_name)
-            vision_tower_module = build_vision_tower(temp_args, delay_load=False)
-            setattr(self, f"vision_tower_{i}", vision_tower_module)
+        self.dinov2.load_model()
+        self.siglip.load_model()
 
         # 计算总hidden_size（DINOv2: 768 + SigLIP: 1152 = 1920）
-        self._hidden_size = sum([getattr(self, f"vision_tower_{i}").hidden_size for i in range(1, len(self.model_names) + 1)])
-        self._image_size = 384
-        self._patch_size = 16
+        self._hidden_size = self.dinov2.hidden_size + self.siglip.hidden_size
+        # self._image_size = 384
+        # self._patch_size = 16
 
-        # 保存每个编码器的image_processor
-        self.image_processor = []
-        for i in range(1, len(self.model_names) + 1):
-            vision_tower = getattr(self, f"vision_tower_{i}")
-            self.image_processor.append(vision_tower.image_processor)
-
-        # 设置梯度要求
-        for i in range(1, len(self.model_names) + 1):
-            getattr(self, f"vision_tower_{i}").requires_grad_(self.unfreeze_mm_vision_tower)
 
         self.is_loaded = True
-        logger.info(f"Hybrid Vision Tower loaded: hidden_size={self._hidden_size}, image_size={self._image_size}, patch_size={self._patch_size}")
+        # print(f"Hybrid Vision Tower loaded: hidden_size={self._hidden_size}, image_size={self._image_size}, patch_size={self._patch_size}")
+        def dual_processor(image):
+            image = image.convert('RGB')
+            siglip_image = self.siglip.image_processor.preprocess(image, return_tensors='pt')['pixel_values'][0]
+            assert list(siglip_image.shape) == [3, 384, 384], f"SigLIP image shape mismatch: {siglip_image.shape}"
+            dinov2_image = self.dinov2.image_processor.preprocess(image, return_tensors='pt')['pixel_values'][0]
+            assert list(dinov2_image.shape) == [3, 518, 518], f"DINOv2 image shape mismatch: {dinov2_image.shape}"
+            return [dinov2_image, siglip_image]
+            # return [dinov2_image]
+        self.image_processor = dual_processor
 
-    def forward(self, images):
+    def forward(self, images, siglip_images):
         """
         前向传播融合过程:
         1. 独立编码：每个编码器处理原始图像（使用各自的image_processor）
@@ -94,68 +80,77 @@ class HybridVisionTower(nn.Module):
         """
         with torch.set_grad_enabled(self.unfreeze_mm_vision_tower):
             output_images_features = []
-            print("HHHHHHHH\n hhhhhhh")
-            for i in range(1, len(self.model_names) + 1):
-                vision_tower = getattr(self, f"vision_tower_{i}")
-                processor = self.image_processor[i-1]
+            # for i in range(1, len(self.model_names) + 1):
+            #     vision_tower = getattr(self, f"vision_tower_{i}")
+            #     processor = self.image_processor[i-1]
                 
-                # 处理图像输入：使用各自的processor
-                if isinstance(images, list):
-                    # PIL图像列表：使用对应的processor处理
-                    processed_images = []
-                    for img in images:
-                        if hasattr(img, 'mode'):  # PIL Image
-                            processed = processor(img, return_tensors="pt")['pixel_values'].squeeze(0)
-                        else:  # 已经是tensor [C, H, W]
-                            processed = img
-                        processed_images.append(processed)
+            #     # 处理图像输入：使用各自的processor
+            #     if isinstance(images, list):
+            #         # PIL图像列表：使用对应的processor处理
+            #         processed_images = []
+            #         for img in images:
+            #             if hasattr(img, 'mode'):  # PIL Image
+            #                 processed = processor(img, return_tensors="pt")['pixel_values'].squeeze(0)
+            #             else:  # 已经是tensor [C, H, W]
+            #                 processed = img
+            #             processed_images.append(processed)
                     
-                    if len(processed_images) > 1:
-                        batch_tensor = torch.stack(processed_images)
-                    else:
-                        batch_tensor = processed_images[0].unsqueeze(0)
-                else:
-                    # 单个tensor输入: [B, C, H, W] 或 [C, H, W]
-                    if images.dim() == 3:
-                        batch_tensor = images.unsqueeze(0)
-                    else:
-                        batch_tensor = images
+            #         if len(processed_images) > 1:
+            #             batch_tensor = torch.stack(processed_images)
+            #         else:
+            #             batch_tensor = processed_images[0].unsqueeze(0)
+            #     else:
+            #         # 单个tensor输入: [B, C, H, W] 或 [C, H, W]
+            #         if images.dim() == 3:
+            #             batch_tensor = images.unsqueeze(0)
+            #         else:
+            #             batch_tensor = images
                     
-                    # 如果输入已经是tensor，假设它可能需要进行一些标准化
-                    # 但为了简化，我们直接使用（在实际使用中可能需要根据具体情况调整）
-                    # 注意：如果输入已经是处理过的tensor，可能需要重新处理以确保兼容性
+            #         # 如果输入已经是tensor，假设它可能需要进行一些标准化
+            #         # 但为了简化，我们直接使用（在实际使用中可能需要根据具体情况调整）
+            #         # 注意：如果输入已经是处理过的tensor，可能需要重新处理以确保兼容性
                 
-                # 移动到正确的设备和数据类型
-                batch_tensor = batch_tensor.to(device=self.device, dtype=self.dtype)
+            #     # 移动到正确的设备和数据类型
+            #     batch_tensor = batch_tensor.to(device=self.device, dtype=self.dtype)
                 
-                # 前向传播获取特征
-                image_features = vision_tower(batch_tensor)  # [B, num_tokens, dim]
+            #     # 前向传播获取特征
+            #     image_features = vision_tower(batch_tensor)  # [B, num_tokens, dim]
                 
-                # 空间分辨率统一到576 tokens (24×24)
-                b, num_tokens, dim = image_features.shape
-                if num_tokens != self.image_token_len:
-                    target_h = target_w = int(np.sqrt(self.image_token_len))  # 24
-                    h = w = int(np.sqrt(num_tokens))
+            #     # 空间分辨率统一到576 tokens (24×24)
+            #     b, num_tokens, dim = image_features.shape
+            #     if num_tokens != self.image_token_len:
+            #         target_h = target_w = int(np.sqrt(self.image_token_len))  # 24
+            #         h = w = int(np.sqrt(num_tokens))
                     
-                    # 重塑为空间网格 [B, H, W, C]
-                    image_features = image_features.view(b, h, w, dim)
-                    # 转换为 [B, C, H, W] 用于插值
-                    image_features = image_features.permute(0, 3, 1, 2).contiguous()
-                    # 双线性插值到目标尺寸
-                    image_features = F.interpolate(
-                        image_features.to(torch.float32), 
-                        size=(target_h, target_w), 
-                        mode='bilinear', 
-                        align_corners=False
-                    ).to(image_features.dtype)
-                    # 转换回 [B, H*W, C]
-                    image_features = image_features.permute(0, 2, 3, 1).contiguous().flatten(1, 2)
+            #         # 重塑为空间网格 [B, H, W, C]
+            #         image_features = image_features.view(b, h, w, dim)
+            #         # 转换为 [B, C, H, W] 用于插值
+            #         image_features = image_features.permute(0, 3, 1, 2).contiguous()
+            #         # 双线性插值到目标尺寸
+            #         image_features = F.interpolate(
+            #             image_features.to(torch.float32), 
+            #             size=(target_h, target_w), 
+            #             mode='bilinear', 
+            #             align_corners=False
+            #         ).to(image_features.dtype)
+            #         # 转换回 [B, H*W, C]
+            #         image_features = image_features.permute(0, 2, 3, 1).contiguous().flatten(1, 2)
                 
-                output_images_features.append(image_features)
+            #     output_images_features.append(image_features)
+            siglip_features = self.siglip(siglip_images)
+            dinov2_features = self.dinov2(images)
+            siglip_features = siglip_features.reshape(siglip_features.shape[0], 27, 27, -1)
+            siglip_features = F.interpolate(
+                siglip_features.permute(0, 3, 1, 2).to(torch.float32), 
+                size=(37, 37), 
+                mode='bilinear', 
+                align_corners=False
+            ).permute(0, 2, 3, 1).to(siglip_features.dtype).reshape(siglip_features.shape[0], 37*37, -1) # [B, 1369, 1152]
+            
             
             # 在特征维度拼接: [B, 576, 768] + [B, 576, 1152] -> [B, 576, 1920]
-            output_tensor = torch.cat(output_images_features, dim=-1)
-            
+            output_tensor = torch.cat([siglip_features, dinov2_features], dim=-1)
+
             return output_tensor
 
     @property

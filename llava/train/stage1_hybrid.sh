@@ -5,11 +5,11 @@
 # vision_tower格式: hybridmodel-facebook/dinov2-base-&&&-siglip/CLIP-ViT-SO400M-14-384
 
 deepspeed llava/train/train_mem.py \
-    --deepspeed ./scripts/zero3.json \
+    --deepspeed ./scripts/zero2.json \
     --model_name_or_path lmsys/vicuna-7b-v1.5 \
     --version v1 \
-    --data_path /nfs/AI/VideoEnhancement/dingfu/vg/LLaVA/playground/blip_laion_cc_sbu_558k.json \
-    --image_folder /nfs/AI/VideoEnhancement/dingfu/vg/LLaVA/playground/data_zips/llava_pretrain/images \
+    --data_path ./playground/llava_v1_5_mix665k.json \
+    --image_folder ./playground/data/llava_pretrain \
     --vision_tower "hybridmodel-facebook/dinov2-base-&&&-siglip/CLIP-ViT-B-16" \
     --mm_projector_type mlp2x_gelu \
     --tune_mm_mlp_adapter True \

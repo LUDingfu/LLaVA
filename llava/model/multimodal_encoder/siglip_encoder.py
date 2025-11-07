@@ -113,8 +113,7 @@ class SiglipVisionTower(nn.Module):
 
         return image_features
 
-    def _forward(self, images, interpolate_token = 576):
+    def forward(self, images):
         with torch.set_grad_enabled(False):
-            image_features = self.vision_tower.forward_features(images.to(device=self.device, dtype=self.dtype))
-            interp_features = self.interpolate(image_features)
-            return interp_features
+            image_features = self.vision_tower.forward_features(images)
+            return image_features
