@@ -712,7 +712,10 @@ class LazySupervisedDataset(Dataset):
                         result = Image.new(pil_img.mode, (height, height), background_color)
                         result.paste(pil_img, ((height - width) // 2, 0))
                         return result
-                image = expand2square(image, tuple(int(x*255) for x in processor.image_mean))
+                if callable(processor):
+                    image = expand2square(image, tuple(int(x*255) for x in (0.485, 0.456, 0.406)))
+                else:
+                    image = expand2square(image, tuple(int(x*255) for x in processor.image_mean))
             if callable(processor):
                 image = processor(image)
             else:
